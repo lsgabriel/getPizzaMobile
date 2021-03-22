@@ -7,6 +7,8 @@ import api from '../../services/api';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useNavigation, useIsFocused} from '@react-navigation/native';
+import useAuth from '../../hooks/useAuth';
+import {Menu, Divider, Provider} from 'react-native-paper';
 
 const App = () => {
 
@@ -14,13 +16,14 @@ const App = () => {
   const navigation = useNavigation();
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState('');
+  const [visible, setVisible] = useState(false);
+  const auth = useAuth(); // auth = {type: 'admin', token:'1a1s22c5fd1a5d1'}
 
   const loadingData = async () => {
-    if(token!==''){
+    if(auth?.token !==''){
       try{
           const response = await api.get('/products',{
-            headers: {'x-access-token': token}
+            headers: {'x-access-token': auth?.token}
           });
           setDados(response['data']);
           setLoading(false);
@@ -36,31 +39,39 @@ const App = () => {
 
   const logoff = async () =>{
     try{
-      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('auth');
       navigation.goBack();
     } catch (error) {
 
     }
   }
 
-  const getData = async()=>{
-    try{
-      setToken( await AsyncStorage.getItem('token'));
-    } catch(error){
-      console.log(error);
-    }
-  }
-
   useEffect(()=>{
-    getData();
     loadingData();
-  }, [token, isFocused]);
+  }, [auth, isFocused]);
 
   return(
+    <Provider>
     <View style={styles.conteudo}>
       <Header>
         <View />
         <Text>Cardapio</Text>
+
+        <Menu
+          visible={visible}
+          onDismiss={()=>setVisible(false)}
+          anchor={
+            <Icon name='more-vert' size={25} color='#fff' 
+              onPress={()=>setVisible(true)}
+            />
+          }
+        >
+          <Menu.Item title='Sair' onPress={()=>logoff()}/>
+          {auth?.type === 'admin' ? 
+            <Menu.Item title='Cadastrar Pizza' onPress={()=>console.log("cadastrar pizza")}/> :
+            null}
+        </Menu>
+
         <Icon 
           name='power-settings-new'
           color="fff"
@@ -79,6 +90,7 @@ const App = () => {
         keyExtractor={item => String(item.id)}
       />
     </View>    
+    </Provider>
   );
 }
 
