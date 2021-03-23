@@ -1,33 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { Header, Input, Button } from 'react-native-elements';
+import React from 'react';
+import { View, Image } from 'react-native';
+import { Header, Input, Button, Icon } from 'react-native-elements';
 import api from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import useAuth from '../../hooks/useAuth';
+import { Formik } from 'formik';
+import styles from '../Edit/styles';
 
-const Edit = ({route, navigation}) =>{
+const Edit = ({ route, navigation }) => {
+    const initialValues = {
+        name: route?.params == undefined ?'': route?.params?.name,
+        description: route?.params == undefined ?'': route?.params?.description
+  }
 
-    const [productName, setProductName] = useState(route.params.name);
-    const [productDescription, setProductDescription] = useState(route.params.description);
-    const [token, setToken] = useState();
+    const auth = useAuth();
 
-    const saveProduct = async () => {
-        try{
-            const body = {
-                name: productName,
-                desc: productDescription
-            }
-            await api.put(`/products/${route.params.id}`, body, {
-                headers: {'x-access-token': token}
+    const saveProduct = async (values) => {
+        try {
+            await api.put(`/products/${route.params.id}`, values, {
+                headers: { 'x-access-token': auth?.token }
             });
             navigation.goBack();
-        }
-        catch(error){
+        } catch (error) {
             console.log(error);
         }
     }
 
-    //delete product
-    const deleteProduct = async () => {
+    const createProduct = async (values) => {
+        try {
+            await api.post(`/products/`, values, {
+                headers: { 'x-access-token': auth?.token }
+            });
+            navigation.goBack();
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+      //delete product
+      const deleteProduct = async () => {
         try{
             await api.delete(`/products/${route.params.id}`,{
                 headers: {'x-access-token': token}
@@ -39,45 +49,70 @@ const Edit = ({route, navigation}) =>{
         }
     }
 
-    const getToken = async () =>{
-        try{
-            setToken(await AsyncStorage.getItem('token'));
-        }
-        catch(error){
-            console.log(error);
-        }
+    const sendInformation = (values)=>{
+        return route.params == undefined ? createProduct(values) : saveProduct(values);
     }
 
-    useEffect(()=>{
-        getToken();
-    }, [])
-
-    return(
+    return (
         <View>
-            <Header/>
+            <Header />
+            <Formik
+                initialValues={initialValues} onSubmit={(values) => sendInformation(values)}           
+            >
+                {({handleChange, handleSubmit, handleBlur, values})=>(
+                <View>
+                    {route.params == undefined ? null :
+                    <Image
+                        source={{
+                            uri: route.params.image                        
+                        }}
+                        style={styles.img}
+                    />
+                    }
+                    <Input
+                        placeholder="Nome do produto"
+                        onChangeText={handleChange('name')}
+                        onBlur={handleBlur('name')}
+                        value={values.name}
+                        leftIcon={
+                            <Icon 
+                                type='font-awesome'
+                                name='pencil'
+                                size={18}
+                                color='#888'
+                            />
+                        }
+                        
+                    />
+                    <Input
+                        placeholder="Descrição do produto"
+                        onChangeText={handleChange('description')}
+                        onBlur={handleBlur('description')}
+                        value={values.description}
+                        leftIcon={
+                            <Icon 
+                                type='font-awesome'
+                                name='comment'
+                                size={18}
+                                color='#888'
+                            />
+                        }
+                        
+                    />
+                    <Button
+                        title={route.params == undefined ? "Criar" : "Salvar"}
+                        onPress={handleSubmit}
+                    />
 
-            <Input 
-                placeholder="Nome do Produto"
-                value={productName}
-                onChange={(value)=>{setProductName(value.nativeEvent.text)}}
-            />
-
-            <Input 
-                placeholder="Descrição do Produto"
-                value={productDescription}
-                onChange={(value)=>{setProductDescription(value.nativeEvent.text)}}
-            />
-
-            <Button
-                title="Salvar"
-                onPress={saveProduct}
-            />
-
-            <Button
-                title="Apagar Produto"
-                onPress={deleteProduct}
-                buttonStyle={{marginTop:5, backgroundColor:'red'}}
-            />
+                        <Button
+                            title="Deletar"
+                            onPress={deleteProduct}
+                            buttonStyle={{ marginTop: 5, backgroundColor: 'red' }}
+                        />
+                </View>
+                )
+                }
+            </Formik>
         </View>
     )
 }

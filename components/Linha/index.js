@@ -3,14 +3,16 @@ import {View, Text, Image, TouchableOpacity} from 'react-native';
 import {Rating} from 'react-native-elements';
 import { useNavigation } from '@react-navigation/native';
 import styles from './styles';
+import useAuth from '../../hooks/useAuth';
 
 const Linha = ({item}) => {
+    const auth = useAuth();
     const navigation = useNavigation();
 
     return (
         <TouchableOpacity 
         onPress={()=> {navigation.navigate('Detalhes', item) }}
-        onLongPress={()=> {navigation.navigate('Edit', item) }}
+        onLongPress={() => auth.type == 'admin' ? navigation.navigate('Edit', item) : null}
         >
             <View style={styles.conteudo}>
                 <Image
